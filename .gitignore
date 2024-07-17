@@ -1,0 +1,8 @@
+# pclist is based on the domain and computer objects therein. domain specific
+PCList.txt
+
+# This is also specific to the environment. Admin accts are added to this.
+primaryUserEstimator_IgnoreList.txt
+
+# Folder will have PC reports that are env specific
+/PC
