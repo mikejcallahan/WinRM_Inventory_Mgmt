@@ -5,9 +5,9 @@
 
   write-host ("
   ***********************************************************************************************************
-  Inventory Management Master $($version) | Mike James Callahan 2023 | MIT license 
+  Inventory Management Master $($version) | Pleroma Tech LLC | Mike J Callahan 2023 | MIT license 
 
-  Requires WinRM service and firewall exception on target machines. Invokes commands on target PCs listed in PCList.txt file. Estimates primary user 
+  Requires WinRM service and firewall exception on target machines. Invokes commands on PCs listed in PCList.txt file. Estimates primary user 
   with temp folder if no Explorer.exe owner exists - otherwise this is given priority. Estimated user, PC name and serialnumber are included in 
   filename of CSV reports. PSuser($currentPSuser), username in passed credentials, system and default user profiles, and users in ignore txt file are 
   skipped/ignored so report name won't include these. Additional usernames can be added to ignoreList. If no user can be estimated 'UNKNOWN' is used. 
@@ -27,13 +27,14 @@
   ")
 
 function Initialize_Inventory([switch]$start,[switch]$utility,[switch]$loop,[switch]$dev,[switch]$pclistedit) {
-  [string]$domain =               "PBSDOM"
+  [string]$domain =               "pleromatech.net"
   [string]$logServer =            "$($env:COMPUTERNAME)"                  <# NEED TO DETERMINE WHETHER I HANDLED MAKING STORE AND LOGSERVER NOT INTERDEPENDENT #>
-  [string]$logServerStore =       "c:\users\administrator\documents\inv"  <# LOCAL PATH HERE, DEPENDENCIES NOT HANDLED YET? #>
+  [string]$logServerStore =       "$($PSscriptRoot)"                      <# LOCAL FULL PATH HERE, GETS CONVERTED TO REMOTE PATH LATER. #>
+  [string]$logServerPCDir =       "$($logServerStore)\PC"
   [string]$primaryUserEstimator = ".\primaryUserEstimator_IgnoreList.txt"
   [string]$defaultPCList =        ".\PCList.txt"
   [string]$pingEnginePath =       ".\util\pcping5.exe"                    <# THIS IS SEPARATE CONSOLE APP THAT TAKES STRING[] OF PC NAMES AND RETURNS NOT-ONLINE LIST. REG PING USED IF MISSING #>
-  [string]$logServerPCDir =       "$($logServerStore)\PC"
+  
   [string]$stage =                "$($env:userprofile)\appdata\local\$($domain)_INV"
   
 
