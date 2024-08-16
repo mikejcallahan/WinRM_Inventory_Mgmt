@@ -1,4 +1,5 @@
 PCList.txt
-primaryUserEstimator_IgnoreList.txt
+UserIgnore.txt
+InvM.log
 /PC/
 /primary/
