@@ -1,5 +1,16 @@
-PCList.txt
-UserIgnore.txt
-InvM.log
+# PSRemoting errors encountered on targets will be logged here
+InvRmt.log
+
+# Folder with bulk PC reports
 /PC/
+
+# DB where PC object exports are saved.
 /primary/
+
+# pclist is based on the domain and computer objects therein.
+PCList.txt
+
+# This is also specific to the environment. Admin accts are added to this.
+UserIgnore.txt
+
+
