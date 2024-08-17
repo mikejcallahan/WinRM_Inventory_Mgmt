@@ -1,4 +1,4 @@
-﻿
+﻿Editing variables for clarity. Reducing globals. Interactive function now defaults to loop after initial sequence.
 [string]$currentPSuser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name;
 [string]$currentPSUserNotFQ = [string](($currentPSuser -split '\\')[-1]);
 [string]$version = "1.3.0";
