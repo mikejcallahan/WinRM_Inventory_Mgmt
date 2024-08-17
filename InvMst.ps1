@@ -3,7 +3,7 @@
 [string]$currentPSUserNotFQ = [string](($currentPSuser -split '\\')[-1]);
 [string]$version = "1.3.0";
 [string[]]$erlog = @();
-[string]$logFile = ".\InvM.log"
+[string]$invRmtLog = ".\InvRmt.log"
 
   write-host ("
   ***********************************************************************************************************
@@ -30,11 +30,12 @@
   ************************************************************************************************************
   ")
 
-
 function Initialize_Inventory([switch]$start,[string]$domain="IT",[string]$runAsUser=$currentPSuser,[int]$cadence=60,[switch]$utility,[switch]$loop=$true,[switch]$dev,[switch]$pclistedit) {                                <# SECONDS FOR LOOP TO PAUSE #>
-  [string]$logServer =            "$($env:COMPUTERNAME)";                                                                                <# #>
-  [string]$logServerStore =       "c:\users\public\$($domain)\inv";  <#GETS CONVERTED TO REMOTE PATH LATER.NEEDS TO BE LOCAL NON-USER PATH. IN ORDER TO ISOLATE RUNAS AND SESSION USER VARS #> 
-  [string]$logServerPCDir =       "$($logServerStore)\PC";
+  
+  
+  [string]$rptServer=             "$($env:COMPUTERNAME)";            <# THIS APP MUST RESIDE ON THIS SERVER NO NETWORK LOCATION YET#>
+  [string]$rptStore =             $dirParent;                        <#GETS CONVERTED TO REMOTE PATH LATER.NEEDS TO BE LOCAL NON UNC PATH. IN ORDER TO ISOLATE RUNAS AND SESSION USER VARS #> 
+  [string]$rptStorePCDir =        "$($rptStore)\PC";
   [string]$userIgnore =           ".\UserIgnore.txt";                <# FOR UTILITY ACCOUNTS AND ANY USERS YOU WANT TO IGNORE ON PCS #>
   [string]$defaultPCList =        ".\PCList.txt";
   [string]$pingEnginePath =       ".\util\pcping5.exe";              <# MULTI-THREAD PING. THIS IS SEPARATE CONSOLE APP THAT TAKES STRING[] OF PC NAMES AND RETURNS NOT-ONLINE LIST. REG PING USED IF MISSING #>
@@ -85,8 +86,8 @@ function Initialize_Inventory([switch]$start,[string]$domain="IT",[string]$runAs
       }
       if(!(housekeeping )) { return "False" }#>
       <#
-      if(($null -eq $logServerStore) -or 
-      (($logServerStore).toupper()).contains("$env:COMPUTERNAME")) -or
+      if(($null -eq $rptStore) -or 
+      (($rptStore).toupper()).contains("$env:COMPUTERNAME")) -or
       #>
       <#--------------------------------------------------------------------------------------------
       IGNORE  LIST GET USERS.
@@ -120,20 +121,14 @@ function Initialize_Inventory([switch]$start,[string]$domain="IT",[string]$runAs
         try { 																						
           invoke-command -computername $activePCList -Credential $creds -Errorvariable erInv1 -ScriptBlock  {  
             [string]$cacheReset = $using:cacheReset
-            [string]$logServerStore = $using:logServerStore
+            [string]$rptStore = $using:rptServerStore
             [string]$stage= $using:stage
-            [string]$logServer = $using:logServer
-            [string]$logServerPCDir = $using:logServerPCDir
+            [string]$rptServer = $using:rptServer
+            [string]$rptStorePCDir = $using:rptServerPCDir
             [string[]]$forboden = $using:forboden
             [string]$domain = $using:domain
             [string]$currentPSuser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name   
             [switch]$dev = $using:dev
-
-            <#----------------------------------------------------------------------------------------------
-            EXECUTION POLICY SET FOR REMOTE CONNECTION (ALLOWS REFERENCED SCRIPTS TO RUN) NO SCRIPTS REF YET. THEY DONT RUN FOR SOME REASON (2 hop?)
-            --------------------------------------------------------------------------------------------------#>
-            Set-ExecutionPolicy -ExecutionPolicy bypass -scope CurrentUser -force
-
             <#---------------------------------------------------------------------------------------------
             CACHE FOLDER 
             ------------------------------------------------------------------------------------------------#>
@@ -206,7 +201,7 @@ function Initialize_Inventory([switch]$start,[string]$domain="IT",[string]$runAs
             }elseif($userEstTempFolder -ne ""){ $passedUserEstimate = $userEstTempFolder
             }else{ $passedUserEstimate = "UNKNOWN" }
             <#---------------------------------------------------------------------------------------------
-            GET PROGRAMS EXPORT CSV (this now works in non-admin user run batch file)
+            GET PROGRAMS EXPORT CSV (this now works in non-admin user run batch file) this will get pulled out into separate batch file run by user. The command runs as non-admin
             ------------------------------------------------------------------------------------------------#>
             get-package -Provider Programs -includewindowsinstaller| Select "Name", "Version", "Summary", "CanonicalId", "InstallLocation", "InstallDate", "UninstallString", "QuietUninstallString", "ProductGUID"  | 
             export-csv ("$($stage)\" + (hostname) + "(" + ((& {wmic bios get serialnumber;}) -join "" -replace("SerialNumber","") -replace(" ","")) + ")_$(($passedUserEstimate).toUpper())_" + "-_Apps_-" + ".csv") -notypeinformation -force
@@ -219,18 +214,18 @@ function Initialize_Inventory([switch]$start,[string]$domain="IT",[string]$runAs
           <#-------------------------------------------------------------------------------------------------------------------------
           END INVOKE ARGS
           -------------------------------------------------------------------------------------------------------------------------- #>
-        }catch{ log -msg "Inv1:Main:$($error[0])"}
-      }else{ write-host "CREDENTIAL FAILED";break;
-      }try{if(!(test-path -path $logFile)){new-item -ItemType file -Path $logFile; $erInv1 | out-file -FilePath $logFile -append; write-host "THERE WERE ERRORS. CHECK LOG"}}catch{ log -msg "Making log file: $($error[0])"}
+        }catch{   log -msg "Inv1:Main:$($error[0])"}
+      }else{    write-host "CREDENTIAL FAILED";break;
+      }try{     if(!(test-path -path $invRmtLog)){new-item -ItemType file -Path $invRmtLog} $erInv1 | out-file -FilePath $invRmtLog -append; write-host "THERE WERE ERRORS. CHECK LOG"}catch{ log -msg "Inv1:PSrm: $($error[0])"}
      <#-------------------------------------------------------------------------------------------------------------------------
      COPY FILES FROM PCs TO LOG LOCATION
      -------------------------------------------------------------------------------------------------------------------------- #>
-    write-host "COPYING LOGS TO $logServer";
+    write-host "COPYING LOGS TO $rptServer";
 
     [string]$stageRemote = $stage.replace(':','$');
-    [string]$logServerPCDirRemote = "$($logServerPCDir.replace(':','$'))";             # SMB path is used for case where script is run on diff server than logserver
+    [string]$rptStorePCDirRemote = "$($rptStorePCDir.replace(':','$'))";             # SMB path is used for case where script is run on diff server than rptServer
     foreach($pc in $activePCList) { 
-      [string]$copyLogCommand = "& robocopy `"\\$pc\$stageRemote`" `"\\$($logServer)\$($logServerPCDirRemote)`" `"*$($pc.toupper())*`" /r:0 /w:0 "
+      [string]$copyLogCommand = "& robocopy `"\\$pc\$stageRemote`" `"\\$($rptServer)\$($rptStorePCDirRemote)`" `"*$($pc.toupper())*`" /r:0 /w:0 "
       if(($dev) -and ($activePCList[0] -eq $pc)) { write-host "ROBOCOPY ARG USED: $copyLogCommand" }
       invoke-expression $copyLogCommand | out-null; 
     }return $true;
@@ -304,7 +299,7 @@ function Initialize_Inventory([switch]$start,[string]$domain="IT",[string]$runAs
   
   if($start -and (!($utility))) { Interactive }elseif($utility -and (!($loop))) { Inventory1 }
   elseif($utility -and $loop) { UtilityLoop -state $true }elseif($pclistedit) { PCListEdit; write-host "PCLIST EDITED. RERUN TO USE"}
-  if($erlog.count > 0) { $erlog | out-file $logFile -Append; write-host "Errors encountered. See $($logFile)" }
+  if($erlog.count > 0) { $erlog | out-file $invRmtLog -Append; write-host "Errors encountered. See $($invRmtLog)" }
   }
 
   
