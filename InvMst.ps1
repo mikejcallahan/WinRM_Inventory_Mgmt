@@ -1,4 +1,4 @@
-﻿param([switch]$help=$true)
+param([switch]$help=$true)
 
 function help {
   function info{
@@ -322,3 +322,4 @@ function Initialize_Inventory([switch]$start,[string]$domain="IT",[string]$runAs
   }
   
   initialize_inventory -start -dev
+
