@@ -209,9 +209,9 @@ function Initialize_Inventory([switch]$start,[string]$domain="IT",[string]$runAs
   -------------------------------------------------------------------------------------#>
    function getCreds([string]$regCmd,[int]$tried=0,[string]$user=$runAsUser,[string]$m="ADMIN TO AUTHENTICATE ON REMOTE MACHINES.(FQDN)") {
      Invoke-Expression $regCmd;
-     if($tried -gt 3){ $erlog += "Credentials not valid"; return $false }
+     if( $tried -gt 3){ $erlog += "Credentials not valid"; return $false }
      try{ $creds=get-credential -user $user -Message $m; 
-       if(($null -eq $creds) -or (!($creds.Password.Length -gt 0))){ write-host "Password invalid";$tried++; getCreds -tried $tried; 
+       if(($null -eq $creds) -or (!($creds.Password.Length -gt 0)) ){ write-host "Password invalid";$tried++; getCreds -tried $tried; 
        }else{ return $creds; }
      }catch [exception] { $erlog +=return $false; }
    }
@@ -299,7 +299,7 @@ function Initialize_Inventory([switch]$start,[string]$domain="IT",[string]$runAs
   $gregCmd;
   $erlog;
 
-  $creds=getCreds -regCmd $gRegCmd -erlog ([ref]$erlog); if(!($creds -eq $false)) {
+  $creds=getCreds -regCmd $gRegCmd -user $runAsUser -erlog ([ref]$erlog); if(!($creds -eq $false)) {
     if($start -or $i) {                                 [string[]]$pclist = PCListEdit -regCmd $gRegCmd -erlog ([ref]$erlog); 
       if(!($pclist -eq $false)){                          $state = Interactive -regCmd $gRegCmd -erlog ([ref]$erlog);
         if($state) {                                        $state = UtilityLoop -regCmd $gRegCmd -creds $creds -run 1 -info "CONTINUING QUERIES IN LOOP" -startTime $startTime -state $true; 
